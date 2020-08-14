@@ -26,6 +26,27 @@ class Board:
     def flash(self):
         raise NotImplementedError
 
+# Acorn CLE-215 support ----------------------------------------------------------------------------
+class AcornCLE215(Board):
+    soc_kwargs = {"uart_baudrate": 115.2e3} # Limited due to jtag_uart
+    def __init__(self):
+        from litex_boards.targets import acorn_cle_215
+        Board.__init__(self, acorn_cle_215.BaseSoC, soc_capabilities={
+            # Communication
+            "jtag_uart",
+            # Storage
+            "spisdcard",
+            # PCIe
+            "pcie",
+            # GPIOs
+            #"leds",
+            # Monitoring
+            #"xadc",
+            # 7-Series specific
+            #"mmcm",
+            #"icap_bitstream",
+        }, bitstream_ext=".bit")
+
 # Arty support -------------------------------------------------------------------------------------
 
 class Arty(Board):
@@ -371,6 +392,7 @@ supported_boards = {
     "nexys_video":  NexysVideo,
     "minispartan6": MiniSpartan6,
     "pipistrello":  Pipistrello,
+    "acorn_cle_215":AcornCLE215,
 
     # Lattice
     "versa_ecp5":   VersaECP5,
@@ -420,12 +442,19 @@ def main():
         # SoC parameters ---------------------------------------------------------------------------
         soc_kwargs = Board.soc_kwargs
         soc_kwargs.update(board.soc_kwargs)
+        if "jtag_uart" in board.soc_capabilities:
+            soc_kwargs.update(uart_name="jtag_uart")
         if "usb_fifo" in board.soc_capabilities:
             soc_kwargs.update(uart_name="usb_fifo")
         if "usb_acm" in board.soc_capabilities:
             soc_kwargs.update(uart_name="usb_acm")
         if "ethernet" in board.soc_capabilities:
             soc_kwargs.update(with_ethernet=True)
+        if "pcie" in board.soc_capabilities:
+            soc_kwargs.update(with_pcie=True)
+
+        if "acorn_cle_215" in board_name:
+            soc_kwargs.update(csr_data_width = 32)
 
         # SoC creation -----------------------------------------------------------------------------
         soc = SoCLinux(board.soc_cls, **soc_kwargs)
